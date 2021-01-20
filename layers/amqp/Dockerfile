@@ -2,6 +2,8 @@ ARG PHP_VERSION
 FROM bref/build-php-$PHP_VERSION:1.0.2 AS ext
 
 ENV LIBRABBITMQ_BUILD_DIR=${BUILD_DIR}/librabbitmq
+ENV LIBAMQP_BUILD_DIR=${BUILD_DIR}/php-amqp
+ENV AMQP_VERSION=df1241852b359cf12c346beaa68de202257efdf1
 
 RUN set -xe; \
     mkdir -p ${LIBRABBITMQ_BUILD_DIR}; \
@@ -17,7 +19,18 @@ RUN set -xe; \
     cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} . && \
     cmake --build . --target install
 
-RUN pecl install amqp
+RUN set -xe; \
+    mkdir -p ${LIBAMQP_BUILD_DIR}; \
+    curl -Ls https://codeload.github.com/php-amqp/php-amqp/tar.gz/${AMQP_VERSION} \
+    | tar xzC ${LIBAMQP_BUILD_DIR}
+
+WORKDIR ${LIBAMQP_BUILD_DIR}/php-amqp-${AMQP_VERSION}/
+
+RUN phpize && \
+    ./configure && \
+    make && \
+    make install
+
 RUN cp /opt/bref/lib/php/extensions/no-debug-non-zts-*/amqp.so /tmp/amqp.so
 RUN echo 'extension=/opt/bref-extra/amqp.so' > /tmp/ext.ini
 
